@@ -470,11 +470,12 @@ if __name__ == '__main__':
     from the command line:
 
     > python runner.py
-
+    
     See the usage string for more details.
 
     > python runner.py --help
     """
+
     msg = ""
     options = loadParameter()
     matches = run(options,msg)
