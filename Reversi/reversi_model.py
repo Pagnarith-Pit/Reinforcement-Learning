@@ -41,10 +41,11 @@ class ReversiGameRule(GameRule):
 
     def initialGameState(self):
         self.agent_colors = {}
-        
         self.current_agent_index = random.choice(range(self.num_of_agent))
         self.agent_colors.update({self.current_agent_index:Cell.BLACK,self.getNextAgentIndex():Cell.WHITE})
         self.validPos = self.validPos()
+
+        print("From model: ", self.agent_colors)
         return ReversiState(self.num_of_agent,GRID_SIZE,self.agent_colors)
 
     def generateSuccessor(self, state, action, agent_id):
@@ -53,7 +54,12 @@ class ReversiGameRule(GameRule):
         else:
             next_state = copy.deepcopy(state)
             update_color = self.agent_colors[agent_id]
+            print("I'm called by agent: ", agent_id)
+            print("This is agent colors at model: ", self.agent_colors)
+            # print("THis is the ID being passed in: ", agent_id)
+            # print("This is update_color: ", update_color)
             next_state.board[action[0]][action[1]] = update_color
+            
             # iterate over all 8 directions and check pieces that require updates
             for direction in [(1,0), (-1,0), (0,1), (0,-1), (1,1), (1,-1), (-1,1), (-1,-1)]:
                 cur_pos = (action[0] + direction[0], action[1] + direction[1])
