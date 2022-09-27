@@ -25,15 +25,15 @@ class myAgent(Agent):
           
             total_score, num_of_visit = visited_state_dict[state_rep]
 
-            try:
-                UCB_val = (total_score/num_of_visit) + math.sqrt(2* math.log(parent_num_of_visit)/num_of_visit)
-            except (ZeroDivisionError):
-                for key, val in visited_state_dict.items():
-                    print("This is the key in visited_state_dict: ", key)
-                    print("This is its value: ", val)
+            # try:
+            UCB_val = (total_score/num_of_visit) + math.sqrt(2* math.log(parent_num_of_visit)/num_of_visit)
+            # except (ZeroDivisionError):
+            #     for key, val in visited_state_dict.items():
+            #         print("This is the key in visited_state_dict: ", key)
+            #         print("This is its value: ", val)
 
-                    print("This state raised Zero Div Error: ", state_rep)
-                    exit()
+            #         print("This state raised Zero Div Error: ", state_rep)
+            #         exit()
 
             if UCB_val > maxUCB:
                 maxUCB = UCB_val
@@ -107,11 +107,11 @@ class myAgent(Agent):
         parent_state_init = game_state
         agent_turn = [player_id, opponent_id]
 
-        if self.endingState(parent_state_init):
+        if actions == ["Pass"]:
             return "Pass"
 
         while time.time() < TIME_LIMIT:
-            breakFlag = False
+            gameEndFlag = False
 
             selection_list = [parent_state_init]
             game_state_child_list = self.expansion(parent_state_init, actions, player_id)
@@ -128,7 +128,7 @@ class myAgent(Agent):
                 if self.endingState(parent_state_next):
                     total_score_final = self.gameRule.calScore(game_state, player_id) - self.gameRule.calScore(game_state, opponent_id) 
                     self.backPropogation(total_score_final, selection_list, visited_state_dict)
-                    breakFlag = True
+                    gameEndFlag = True
                     break
 
                 game_state_child_list = self.expansion(parent_state_next, actions_next, agent_turn[i])
@@ -142,7 +142,7 @@ class myAgent(Agent):
                 # if child is ending state, stop here, return total score, propgate, and continue
                 i = (i + 1)%2
 
-            if breakFlag:
+            if gameEndFlag:
                 continue
 
             total_score_final = self.simulation(best_child_state, agent_turn[i], agent_turn[(i + 1)%2])
