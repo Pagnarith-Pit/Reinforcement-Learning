@@ -1,7 +1,6 @@
 from template import GameState, GameRule, Agent
 from Reversi.reversi_model import *
 from Reversi.reversi_utils import boardToString
-from myTeam import NaiveScore
 import math
 import random
 import time
@@ -17,11 +16,9 @@ class myAgent(Agent):
     def __init__(self,_id):
         super().__init__(_id)
         # added
-        self.gameRule = ReversiGameRule(GameRule)
+        self.gameRule = ReversiGameRule(2)
         self.bestAction = None
         # initialize dict for {eval: move}
-
-        
     
     def SelectAction(self,actions,game_state):
         """
@@ -29,8 +26,9 @@ class myAgent(Agent):
         """
 
         # Initialize minimax-alpha with alpha-beta pruning with values 
+        self.gameRule.agent_colors = game_state.agent_colors
 
-        return self.MaxValue(game_state,MIN,MAX,self.id,depth=INITIAL_DEPTH)
+        return self.AlphaBetaMiniMax(game_state,game_state,actions)
         #return random.choice(actions)
 
     def NaiveEval(self, game_state):
@@ -40,6 +38,24 @@ class myAgent(Agent):
         opposition"""
         return self.gameRule.calScore(game_state, self.id) \
             - self.gameRule.calScore(game_state, (self.id + 1)%2)
+
+
+
+    def AlphaBetaMiniMax(self, game_state,agent_id,actions):
+        depth = INITIAL_DEPTH
+        # initialize alpha, beta 
+        alpha, beta = MIN, MAX 
+
+        action_successor_states = [(action,self.gameRule.generateSuccessor(self, game_state, action, agent_id)) for action in actions]
+
+        for (action, successor_state) in action_successor_states:
+            score = self.MinValue(successor_state,alpha,beta,agent_id,depth-1)
+            if score > alpha: 
+                alpha = score 
+                self.bestAction = action
+
+        return self.bestAction
+
 
     # Implement MiniMax with Alpha-Beta pruning 
     def MaxValue(self,game_state,alpha,beta,agent_id,depth):
@@ -55,6 +71,10 @@ class myAgent(Agent):
 
         ## Get legal actions 
         actions = self.gameRule.getLegalActions(self, game_state, agent_id)
+
+        # check length of actions?
+        if len(actions) == 0: 
+            return self.MinValue(game_state,alpha,beta,self.gameRule.getNextAgentIndex(),depth-1)
 
         ## apply -> get successor states 
         successor_states = [self.gameRule.generateSuccessor(self, game_state, action, agent_id) for action in actions]
@@ -85,6 +105,10 @@ class myAgent(Agent):
 
         ## Get legal actions 
         actions = self.gameRule.getLegalActions(self, game_state, agent_id)
+
+        # check length of actions?
+        if len(actions) == 0: 
+            return self.MaxValue(game_state,alpha,beta,self.gameRule.getNextAgentIndex(),depth-1)
 
         ## apply -> get successor states 
         successor_states = [self.gameRule.generateSuccessor(self, game_state, action, agent_id) for action in actions]
