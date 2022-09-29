@@ -7,6 +7,16 @@ import time
 
 INITIAL_DEPTH = 2
 CUTOFF = 0
+GRID_SIZE = 8 
+
+STABILITY_WEIGHTS = [[4,  -3,  2,  2,  2,  2, -3,  4],
+                   [-3, -4, -1, -1, -1, -1, -4, -3],
+                   [2,  -1,  1,  0,  0,  1, -1,  2],
+                   [2,  -1,  0,  1,  1,  0, -1,  2],
+                   [2,  -1,  0,  1,  1,  0, -1,  2],
+                   [2,  -1,  1,  0,  0,  1, -1,  2],
+                   [-3, -4, -1, -1, -1, -1, -4, -3],
+                   [4,  -3,  2,  2,  2,  2, -3,  4]]
 
 # Initial values of alpha, beta 
 MAX, MIN = math.inf, -math.inf
@@ -31,9 +41,6 @@ class myAgent(Agent):
         #self.gameRule.agent_colors = game_state.agent_colors
         if actions == ["Pass"]:
             return "Pass"
-
-     
-    
 
         depth = INITIAL_DEPTH
         # initialize alpha, beta 
@@ -63,6 +70,60 @@ class myAgent(Agent):
         opposition"""
         return self.gameRule.calScore(game_state, agent_id) \
             - self.gameRule.calScore(game_state, (agent_id + 1)%2)
+
+    def LocationScore_quick(self,game_state, agent_id):
+        score = 0 
+        corners_loc = [(0,0), (7,7), (0,7), (7,0)]
+        corner_trap_loc = [(1,1), (1,6), (6,1), (6,6)]
+        corner_adj = [(0,1), (6,0), (1,0), (0,7), (6,0), (6,7), (7,1), (7,6)]
+
+
+    
+        for (i,j) in corners_loc:
+            if game_state.board[i][j] == self.gameRule.agent_colors[agent_id]:
+                score += 4
+            #score += 4
+        #if game_state.board[7][7] == self.gameRule.agent_colors(agent_id):
+            #score += 4
+        #if game_state.board[0][7] == self.gameRule.agent_colors(agent_id):
+           # score += 4
+
+        #if game_state.board[7][0] == self.gameRule.agent_colors(agent_id):
+            #score += 4
+        for (i,j) in corner_trap_loc: 
+            if game_state.board[i][j] == self.gameRule.agent_colors[agent_id]:
+                score -= 4
+        for (i,j) in corner_adj:
+            if game_state.board[i][j] == self.gameRule.agent_colors[agent_id]:
+                score -= 3
+        return score 
+
+
+
+    def LocationScore(self,game_state, agent_id):
+        score = 0 
+        for i in range(GRID_SIZE):
+            for j in range(GRID_SIZE):
+                if game_state.board[i][j] == self.gameRule.agent_colors[agent_id]:
+                    score += STABILITY_WEIGHTS[i][j]
+                elif game_state.board[i][j] == self.gameRule.agent_colors[(agent_id + 1)%2]:
+                    score -= STABILITY_WEIGHTS[i][j]
+        return score
+
+
+    def Heuristic(self, game_state, agent_id):
+        score = self.NaiveEval(game_state,agent_id) + self.LocationScore(game_state, agent_id)
+        return score 
+
+
+    # def countScore(board,grid_size,player_color):
+    # score = 0
+    # for i in range(grid_size):
+    #     for j in range(grid_size):
+    #         if board[i][j] == player_color:
+    #             score += 1
+    # return score   
+
 
 
     # # Implement MiniMax with Alpha-Beta pruning 
@@ -105,7 +166,7 @@ class myAgent(Agent):
 
         # IF CUTOFF-Test (have not checked end game conditions)
         if depth == 0: 
-            return self.NaiveEval(game_state,agent_id)
+            return self.Heuristic(game_state,agent_id)
 
 
         # find successors: For each s in successors(state) do
@@ -141,7 +202,7 @@ class myAgent(Agent):
 
         # IF CUTOFF-Test (have not checked end game conditions)
         if depth == 0: 
-            return self.NaiveEval(game_state,(agent_id + 1)%2)
+            return self.Heuristic(game_state,(agent_id + 1)%2)
 
         # find successors: For each s in successors(state) do
 
