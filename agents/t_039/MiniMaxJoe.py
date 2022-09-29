@@ -100,7 +100,7 @@ class myAgent(Agent):
 
 
 
-    def LocationScore(self,game_state, agent_id):
+    def LocationScore(self,game_state,agent_id):
         score = 0 
         for i in range(GRID_SIZE):
             for j in range(GRID_SIZE):
@@ -110,9 +110,20 @@ class myAgent(Agent):
                     score -= STABILITY_WEIGHTS[i][j]
         return score
 
+    def getMobolityScore(self,game_state,agent_id):
+        ownmoves = 0 
+        opponentmoves = 0 
+
+        ownmoves = len(self.gameRule.getLegalActions(game_state, agent_id))-1
+        opponentmoves = len(self.gameRule.getLegalActions(game_state,(agent_id + 1)%2))-1
+
+        score = (ownmoves - opponentmoves) / float(10)
+
+        return score
+
 
     def Heuristic(self, game_state, agent_id):
-        score = self.NaiveEval(game_state,agent_id) + self.LocationScore(game_state, agent_id)
+        score = self.NaiveEval(game_state,agent_id) + self.LocationScore(game_state, agent_id) + self.getMobolityScore(game_state, agent_id)
         return score 
 
 
