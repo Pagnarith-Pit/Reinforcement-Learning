@@ -108,7 +108,7 @@ class myAgent(Agent):
         return bonus
 
     def SelectAction(self,actions,game_state):
-        TIME_LIMIT = time.time() + 1
+        TIME_LIMIT = time.time() + 0.96
         self.GRID_SIZE = game_state.grid_size
         visited_state_dict = dict()
         actions = list(set(actions))
@@ -165,5 +165,8 @@ class myAgent(Agent):
 
             total_score_final = self.simulation(best_child_state, agent_turn[i], agent_turn[(i + 1)%2])
             self.backPropogation(total_score_final, selection_list, visited_state_dict, bonus)
-
-        return best_action
+        print("This is the best action: ", best_action)
+        try:
+            return best_action
+        except:
+            print("This is the error")
