@@ -17,7 +17,7 @@ STABILITY_WEIGHTS = [[4,  -3,  2,  2,  2,  2, -3,  4],
                    [2,  -1,  1,  0,  0,  1, -1,  2],
                    [-3, -4, -1, -1, -1, -1, -4, -3],
                    [4,  -3,  2,  2,  2,  2, -3,  4]]
-                   
+
 # Initial values of alpha, beta 
 MAX, MIN = math.inf, -math.inf
 
@@ -98,14 +98,20 @@ class myAgent(Agent):
 
 
     def getStability(self,game_state,agent_id):
-        score = 0 
+        my_stability, tot = 0,0
         for i in range(GRID_SIZE):
             for j in range(GRID_SIZE):
                 if game_state.board[i][j] == self.gameRule.agent_colors[agent_id]:
-                    score += STABILITY_WEIGHTS[i][j]
+                    my_stability += STABILITY_WEIGHTS[i][j]
+                    tot += abs(STABILITY_WEIGHTS[i][j])
                 elif game_state.board[i][j] == self.gameRule.agent_colors[(agent_id + 1)%2]:
-                    score -= STABILITY_WEIGHTS[i][j]
-        return score
+                    my_stability -= STABILITY_WEIGHTS[i][j]
+                    tot += abs(STABILITY_WEIGHTS[i][j])
+
+        if not tot == 0:
+            return 100 * float(my_stability) / tot
+        else:
+            return 0
 
     def getCorners(self,game_state,agent_id):
         corners_loc = [(0,0), (0,7), (7,0), (7,7)]
@@ -117,14 +123,18 @@ class myAgent(Agent):
                 self_corner += 1
             elif game_state.board[i][j] == self.gameRule.agent_colors[(agent_id + 1)%2]:
                 opponent_corner += 1 
-        return 100 * (float(self_corner) - opponent_corner ) / (float(self_corner) + opponent_corner)
+
+        if float(self_corner) + opponent_corner != 0:
+            return 100 * (float(self_corner) - opponent_corner ) / (float(self_corner) + opponent_corner)
+        else:
+            return 0
 
 
     def Heuristic(self, game_state, agent_id):
         #score = self.NaiveEval(game_state,agent_id) + self.LocationScore(game_state, agent_id) + self.getMobolityScore(game_state, agent_id)
 
-        eval = 100 * self.getCorners(game_state,agent_id) + 5 * self.getActualMobility(game_state,agent_id) + \
-            25 * self.CoinParity(game_state,agent_id) + 25 * self.getStability(game_state,agent_id)
+        eval = 100 * self.getCorners(game_state,agent_id) + 40 * self.getActualMobility(game_state,agent_id) + \
+            10 * self.CoinParity(game_state,agent_id) + 40 * self.getStability(game_state,agent_id)
         
         return eval 
 
