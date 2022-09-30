@@ -75,16 +75,16 @@ class myAgent(Agent):
        
         return total_score_final
 
-    def backPropogation(self, total_score_final, selection_list, visited_state_dict):
+    def backPropogation(self, total_score_final, selection_list, visited_state_dict, bonus):
 
         for state in selection_list:
             state_rep = boardToString(state.board, self.GRID_SIZE)
             if state_rep in visited_state_dict:
                 total_score, num_of_visit = visited_state_dict[state_rep]
-                total_score += total_score_final
+                total_score = total_score + total_score_final + bonus
                 visited_state_dict[state_rep] = (total_score, num_of_visit + 1)
             else:
-                visited_state_dict[state_rep] = (total_score_final, 1)
+                visited_state_dict[state_rep] = (total_score_final + bonus, 1)
     
     def endingState(self, game_state):
         if self.gameRule.getLegalActions(game_state,0) == ["Pass"] \
@@ -92,10 +92,23 @@ class myAgent(Agent):
             return True
         else: return False
 
+    # This expresses domain knowledge
+    def calculateBonusScore(self, action):
+        STABILITY_WEIGHTS = [[4,  -3,  2,  2,  2,  2, -3,  4],
+                   [-3, -4, -1, -1, -1, -1, -4, -3],
+                   [2,  -1,  1,  0,  0,  1, -1,  2],
+                   [2,  -1,  0,  1,  1,  0, -1,  2],
+                   [2,  -1,  0,  1,  1,  0, -1,  2],
+                   [2,  -1,  1,  0,  0,  1, -1,  2],
+                   [-3, -4, -1, -1, -1, -1, -4, -3],
+                   [4,  -3,  2,  2,  2,  2, -3,  4]]
+        y, x = action
+        bonus = STABILITY_WEIGHTS[y][x]
 
+        return bonus
 
     def SelectAction(self,actions,game_state):
-        TIME_LIMIT = time.time() + 0.98
+        TIME_LIMIT = time.time() + 1
         self.GRID_SIZE = game_state.grid_size
         visited_state_dict = dict()
         actions = list(set(actions))
@@ -112,11 +125,16 @@ class myAgent(Agent):
 
         while time.time() < TIME_LIMIT:
             gameEndFlag = False
-
             selection_list = [parent_state_init]
             game_state_child_list = self.expansion(parent_state_init, actions, player_id)
             best_child_state = self.selection(parent_state_init, game_state_child_list, visited_state_dict)
             selection_list.append(best_child_state)
+            index = game_state_child_list.index(best_child_state)
+            best_action = actions[index]
+            
+
+            #Add bonus
+            bonus = self.calculateBonusScore(best_action)
             
             i = 1
             best_child_state_rep = boardToString(best_child_state.board, self.GRID_SIZE)
@@ -127,7 +145,7 @@ class myAgent(Agent):
              
                 if self.endingState(parent_state_next):
                     total_score_final = self.gameRule.calScore(game_state, player_id) - self.gameRule.calScore(game_state, opponent_id) 
-                    self.backPropogation(total_score_final, selection_list, visited_state_dict)
+                    self.backPropogation(total_score_final, selection_list, visited_state_dict, bonus)
                     gameEndFlag = True
                     break
 
@@ -146,17 +164,6 @@ class myAgent(Agent):
                 continue
 
             total_score_final = self.simulation(best_child_state, agent_turn[i], agent_turn[(i + 1)%2])
-            self.backPropogation(total_score_final, selection_list, visited_state_dict)
+            self.backPropogation(total_score_final, selection_list, visited_state_dict, bonus)
 
-        max_visit = 0
-        best_move = ()
-        for action in actions:
-            childState = self.gameRule.generateSuccessor(parent_state_init, action, self.id)
-            childState_rep = boardToString(childState.board, self.GRID_SIZE)
-            total_score, num_visit = visited_state_dict[childState_rep]
-
-            if num_visit > max_visit:
-                max_visit = num_visit
-                best_move = action
-
-        return best_move
+        return best_action
