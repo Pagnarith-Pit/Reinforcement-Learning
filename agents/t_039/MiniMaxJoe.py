@@ -8,6 +8,7 @@ import time
 INITIAL_DEPTH = 2
 CUTOFF = 0
 GRID_SIZE = 8 
+TIME_LIMIT = 0.95
 
 STABILITY_WEIGHTS = [[4,  -3,  2,  2,  2,  2, -3,  4],
                    [-3, -4, -1, -1, -1, -1, -4, -3],
@@ -28,17 +29,19 @@ class myAgent(Agent):
         # added
         self.gameRule = ReversiGameRule(2)
         self.bestAction = None
+        self.op_id = self.gameRule.getNextAgentIndex()
         # initialize dict for {eval: move}
     
     def SelectAction(self,actions,game_state):
         """
-        Returns state from minimax strategy 
+        AlphaBeta MiniMax with Iterative Deepening 
         """
-        TIME_LIMIT = time.time() + 0.95
-        actions = list(set(actions))
+        
+        startTime = time.time()
 
+        actions = list(set(actions))
         # Initialize minimax-alpha with alpha-beta pruning with values 
-        #self.gameRule.agent_colors = game_state.agent_colors
+        self.gameRule.agent_colors = game_state.agent_colors
         if actions == ["Pass"]:
             return "Pass"
 
@@ -52,16 +55,79 @@ class myAgent(Agent):
         action_successor_states = [(action,self.gameRule.generateSuccessor(game_state, action, self.id)) for action in actions]
 
         for (action, successor_state) in action_successor_states:
-            score = self.MinValue(successor_state,alpha,beta,self.id,depth-1)
+            score = self.MinValue(successor_state,alpha,beta,self.id,depth-1,startTime)
             if score > alpha: 
                 alpha = score 
                 bestAction = action
-
         return bestAction
-    
-
-        
         #return random.choice(actions)
+
+    def MaxValue(self,game_state,alpha,beta,agent_id,depth,startTime):
+        """Returns the minimax value of the state"""
+        # alpha: the best score for MAX along the path to state 
+        # beta: the best score for MIN along the path to state 
+
+        # IF CUTOFF-Test (have not checked end game conditions)
+        if depth == 0 or (time.time() - startTime) > TIME_LIMIT or self.endState(game_state):
+        #if depth == 0:
+            return self.Heuristic(game_state,agent_id)
+
+
+        # find successors: For each s in successors(state) do
+
+        ## Get legal actions (of opponent?)
+        actions = self.gameRule.getLegalActions(game_state,agent_id)
+
+        # check length of actions?
+        if len(actions) == 0:
+            return self.MinValue(game_state,alpha,beta,agent_id,depth-1,startTime)
+
+        ## apply -> get successor states 
+        successor_states = [self.gameRule.generateSuccessor(game_state, action, agent_id) for action in actions]
+
+        for successor_state in successor_states:
+            score = self.MinValue(successor_state,alpha,beta,agent_id,depth-1,startTime)
+            if score > beta: 
+                return score 
+
+            if score > alpha: 
+                alpha = score 
+        return alpha 
+
+    def MinValue(self,game_state,alpha,beta,agent_id,depth,startTime):
+        """Returns the minimax value of the state"""
+        # alpha: the best score for MAX along the path to state 
+        # beta: the best score for MIN along the path to state 
+
+        # IF CUTOFF-Test (have not checked end game conditions)
+        if depth == 0 or (time.time() - startTime) > TIME_LIMIT or self.endState(game_state):
+        #if depth == 0:
+            return self.Heuristic(game_state,(agent_id + 1)%2)
+
+        # find successors: For each s in successors(state) do
+
+        ## Get legal actions 
+        op_id = self.gameRule.getNextAgentIndex()
+        actions = self.gameRule.getLegalActions(game_state, op_id)
+
+        # check length of actions?
+        if len(actions) == 0: 
+            return self.MaxValue(game_state,alpha,beta,agent_id,depth-1,startTime)
+
+        successor_states = [self.gameRule.generateSuccessor(game_state, action, op_id) for action in actions]
+
+        # loop 
+        # get opponent id 
+        for successor_state in successor_states:
+            score = self.MaxValue(successor_state,alpha,beta,agent_id,depth-1,startTime)
+            if score < alpha: 
+                return score 
+            if score < beta:
+                beta = score 
+        return beta
+
+
+
 
     def CoinParity(self, game_state,agent_id):
         """
@@ -134,71 +200,9 @@ class myAgent(Agent):
         #score = self.NaiveEval(game_state,agent_id) + self.LocationScore(game_state, agent_id) + self.getMobolityScore(game_state, agent_id)
 
         eval = 100 * self.getCorners(game_state,agent_id) + 40 * self.getActualMobility(game_state,agent_id) + \
-            10 * self.CoinParity(game_state,agent_id) + 40 * self.getStability(game_state,agent_id)
+            40 * self.CoinParity(game_state,agent_id) + 25 * self.getStability(game_state,agent_id)
         
-        return eval 
-
-    def MaxValue(self,game_state,alpha,beta,agent_id,depth):
-        """Returns the minimax value of the state"""
-        # alpha: the best score for MAX along the path to state 
-        # beta: the best score for MIN along the path to state 
-
-        # IF CUTOFF-Test (have not checked end game conditions)
-        if depth == 0: 
-            return self.Heuristic(game_state,agent_id)
-
-
-        # find successors: For each s in successors(state) do
-
-        ## Get legal actions (of opponent?)
-        actions = self.gameRule.getLegalActions(game_state,agent_id)
-
-        # check length of actions?
-        if len(actions) == 0: 
-            return self.MinValue(game_state,alpha,beta,agent_id,depth-1)
-
-        ## apply -> get successor states 
-        successor_states = [self.gameRule.generateSuccessor(game_state, action, agent_id) for action in actions]
-
-        for successor_state in successor_states:
-            score = self.MinValue(successor_state,alpha,beta,agent_id,depth-1)
-            if score > beta: 
-                return score 
-
-            if score > alpha: 
-                alpha = score 
-        return alpha 
-
-    def MinValue(self,game_state,alpha,beta,agent_id,depth):
-        """Returns the minimax value of the state"""
-        # alpha: the best score for MAX along the path to state 
-        # beta: the best score for MIN along the path to state 
-
-        # IF CUTOFF-Test (have not checked end game conditions)
-        if depth == 0: 
-            return self.Heuristic(game_state,(agent_id + 1)%2)
-
-        # find successors: For each s in successors(state) do
-
-        ## Get legal actions 
-        op_id = self.gameRule.getNextAgentIndex()
-        actions = self.gameRule.getLegalActions(game_state, op_id)
-
-        # check length of actions?
-        if len(actions) == 0: 
-            return self.MaxValue(game_state,alpha,beta,agent_id,depth-1)
-
-        successor_states = [self.gameRule.generateSuccessor(game_state, action, op_id) for action in actions]
-
-        # loop 
-        # get opponent id 
-        for successor_state in successor_states:
-            score = self.MaxValue(successor_state,alpha,beta,agent_id,depth-1)
-            if score < alpha: 
-                return score 
-            if score < beta:
-                beta = score 
-        return beta
+        return eval
 
 
 
@@ -220,4 +224,12 @@ class myAgent(Agent):
             if game_state.board[i][j] == self.gameRule.agent_colors[agent_id]:
                 score -= 3
         return score 
+    def endState(self, game_state):
+        """
+        Returns true/false, whether both players have action of "pass" 
+        """
+        own_actions = self.gameRule.getLegalActions(game_state,self.id)
+        op_actions = self.gameRule.getLegalActions(game_state,self.op_id)
+
+        return own_actions == ["Pass"] and op_actions == ["Pass"]
 
