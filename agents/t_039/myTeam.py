@@ -94,14 +94,14 @@ class myAgent(Agent):
 
     # This expresses domain knowledge
     def calculateBonusScore(self, action):
-        STABILITY_WEIGHTS = [[4,  -3,  2,  2,  2,  2, -3,  4],
-                   [-3, -4, -1, -1, -1, -1, -4, -3],
+        STABILITY_WEIGHTS = [[10,  -5,  2,  2,  2,  2, -5,  10],
+                   [-5, -10, -1, -1, -1, -1, -10, -5],
                    [2,  -1,  1,  0,  0,  1, -1,  2],
                    [2,  -1,  0,  1,  1,  0, -1,  2],
                    [2,  -1,  0,  1,  1,  0, -1,  2],
                    [2,  -1,  1,  0,  0,  1, -1,  2],
-                   [-3, -4, -1, -1, -1, -1, -4, -3],
-                   [4,  -3,  2,  2,  2,  2, -3,  4]]
+                   [-5, -10, -1, -1, -1, -1, -10, -5],
+                   [10,  -5,  2,  2,  2,  2, -5,  10]]
         y, x = action
         bonus = STABILITY_WEIGHTS[y][x]
 
