@@ -3,8 +3,10 @@ from Reversi.reversi_model import *
 import math
 import random
 
+MAX = math.inf
 MIN = -math.inf
 GRID_SIZE = 8
+THRESHOLD = 16
 
 STATIC_WEIGHTS = [[5,  -4,  2,  2,  2,  2, -4,  5],
                 [-4, -4, -1, -1, -1, -1, -4, -4],
@@ -18,12 +20,15 @@ STATIC_WEIGHTS = [[5,  -4,  2,  2,  2,  2, -4,  5],
 class myAgent(Agent):
     def __init__(self,_id):
         super().__init__(_id)
+        self.validPos = self.validPos()
         self.gameRule = ReversiGameRule(2)
+        self.stepCount = 0
 
     def SelectAction(self,actions,game_state):
-        """ Initialises and returns an action from the NegaMax algorithm"""
+        self.stepCount += 1
+        """ Initialises and returns an action from the Greedy Search algorithm"""
         actions = list(set(actions))
-        bestval = MIN
+        bestval = 0
         nextAction = random.choice(actions)
         player_id = self.id
 
@@ -33,12 +38,23 @@ class myAgent(Agent):
 
         action_child_states = [(action, self.gameRule.generateSuccessor(game_state, action, self.id)) for action in actions]
         
-        for (action, child_state) in action_child_states:
-            val = self.GreedyBF(child_state, player_id)
-            if val > bestval:
-                bestval = val
-                nextAction = action
-            
+        # Play to maximise player score pre move threshold
+        if self.stepCount > THRESHOLD:
+            bestval = MIN
+            for (action, child_state) in action_child_states:
+                val = self.GreedyBF(child_state, player_id)
+                if val > bestval:
+                    bestval = val
+                    nextAction = action
+        
+        # Play to minimize opponent score post move threshold
+        if self.stepCount <= THRESHOLD:
+            bestval = MAX
+            for (action, child_state) in action_child_states:
+                val = self.GreedyBF(child_state, self.Op_id(player_id))
+                if val < bestval:
+                    bestval = val
+                    nextAction = action
         
         return nextAction
 
@@ -55,7 +71,7 @@ class myAgent(Agent):
         """ Returns an overall heuristic value for a state """
         eval = 5 * self.ScoreHeuristic(game_state, agent_id) + 50 * self.CornerHeuristic(game_state, agent_id) \
                 + 15 * self.StaticWeightHeuristic(game_state, agent_id) + 10 * self.MobilityHeuristic(game_state, agent_id) \
-                + 10 * self.FrontierDiscs
+                + 10 * self.FrontierDiscs(game_state, agent_id)
         return eval
 
     def ScoreHeuristic(self, game_state, agent_id):
@@ -163,3 +179,9 @@ class myAgent(Agent):
             
         elif lenDiff == 0:
             return 0 
+    def validPos(self):
+        pos_list=[]
+        for x in range(GRID_SIZE):
+            for y in range(GRID_SIZE):
+                pos_list.append((x,y))
+        return pos_list
