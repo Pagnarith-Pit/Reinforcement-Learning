@@ -1,14 +1,10 @@
 from template import Agent
 from Reversi.reversi_model import *
-import time
 import math
 import random
 
-MAX_DEPTH = 2
-START_DEPTH = 0
 MIN = -math.inf
 GRID_SIZE = 8
-TIME_LIMIT = 0.95
 
 STATIC_WEIGHTS = [[5,  -4,  2,  2,  2,  2, -4,  5],
                 [-4, -4, -1, -1, -1, -1, -4, -4],
@@ -30,7 +26,6 @@ class myAgent(Agent):
         bestval = MIN
         nextAction = random.choice(actions)
         player_id = self.id
-        StartTime = time.time()
 
         # If player is forced to pass
         if actions == ["Pass"]:
@@ -39,7 +34,7 @@ class myAgent(Agent):
         action_child_states = [(action, self.gameRule.generateSuccessor(game_state, action, self.id)) for action in actions]
         
         for (action, child_state) in action_child_states:
-            val = self.GreedyBF(child_state, player_id, StartTime)
+            val = self.GreedyBF(child_state, player_id)
             if val > bestval:
                 bestval = val
                 nextAction = action
@@ -47,7 +42,7 @@ class myAgent(Agent):
         
         return nextAction
 
-    def GreedyBF(self, game_state, agent_id, StartTime):
+    def GreedyBF(self, game_state, agent_id):
         """ Returns heuristic value for a game state """
 
         return self.HeuristicScore(game_state, agent_id)
@@ -58,8 +53,9 @@ class myAgent(Agent):
 
     def HeuristicScore(self, game_state, agent_id):
         """ Returns an overall heuristic value for a state """
-        eval = 5 * self.ScoreHeuristic(game_state, agent_id) + 15 * self.CornerHeuristic(game_state, agent_id) \
-                + 5 * self.StaticWeightHeuristic(game_state, agent_id) + 5 * self.MobilityHeuristic(game_state, agent_id)
+        eval = 5 * self.ScoreHeuristic(game_state, agent_id) + 50 * self.CornerHeuristic(game_state, agent_id) \
+                + 15 * self.StaticWeightHeuristic(game_state, agent_id) + 10 * self.MobilityHeuristic(game_state, agent_id) \
+                + 10 * self.FrontierDiscs
         return eval
 
     def ScoreHeuristic(self, game_state, agent_id):
@@ -121,10 +117,49 @@ class myAgent(Agent):
         else:
             return 0
 
-    def TerminalState(self, game_state, player_actions, agent_id):
+    def FrontierDiscs(self,game_state,agent_id):
         """
-        Checks whether the game state is a terminal state.
-        Uses the list of player actions generated earlier in the NegaMax algorithm.
+        Discs next to empty squares. These discs have a higher liklihood of being flipped, 
+        so it is ideal to minimize the number of frontier discs we control.
         """
-        opponent_actions = self.gameRule.getLegalActions(game_state, self.Op_id(agent_id))
-        return (player_actions == ["Pass"]) and (opponent_actions == ["Pass"])
+        ownFrontiers = set()
+        opFrontiers = set()
+
+        # Compute frontier discs 
+        for x in range(GRID_SIZE):
+            for y in range(GRID_SIZE):
+                # Own frontier discs
+                if game_state.board[x][y] == self.gameRule.agent_colors[agent_id]:
+                    # Enumerate over possible directions 
+                    pos = (x,y)
+                    for direction in [(1,0), (-1,0), (0,1), (0,-1), (1,1), (1,-1), (-1,1), (-1,-1)]:
+                        temp_pos = tuple(map(operator.add,pos,direction))
+                        # If a valid and empty move, disc is a frontier disc
+                        if temp_pos in self.validPos and game_state.getCell(temp_pos) == Cell.EMPTY:
+                            ownFrontiers.add(pos) 
+
+                # Opponent frontier discs
+                elif game_state.board[x][y] == self.gameRule.agent_colors[(agent_id + 1)%2]:
+                    # Enumerate over possible directions 
+                    pos = (x,y)
+                    for direction in [(1,0), (-1,0), (0,1), (0,-1), (1,1), (1,-1), (-1,1), (-1,-1)]:
+                        temp_pos = tuple(map(operator.add,pos,direction))
+                        # If a valid and empty move, disc is a frontier disc 
+                        if temp_pos in self.validPos and game_state.getCell(temp_pos) == Cell.EMPTY:
+                            opFrontiers.add(pos)
+        # Compute metrics 
+        ownFrontierLen = len(ownFrontiers)
+        opFrontierLen = len(opFrontiers)
+        lenDiff = ownFrontierLen - opFrontierLen
+        totalFrontier = ownFrontierLen + opFrontierLen
+
+        # Player has more frontier discs than opponent 
+        if lenDiff > 0:
+            return - 100 * ownFrontierLen / totalFrontier
+
+        # Opponent has more frontier discs than the player
+        elif lenDiff < 0:
+            return 100 * opFrontierLen / totalFrontier
+            
+        elif lenDiff == 0:
+            return 0 
