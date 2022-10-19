@@ -12,6 +12,10 @@ class myAgent(Agent):
         self.MCTS = MCTS(self.gameRule, _id)
 
     def SelectAction(self,actions,game_state):
+
+        if actions == ["Pass"]:
+            return "Pass"
+        
         self.gameRule.agent_colors = game_state.agent_colors
 
         # if self.stepCount > 20:
@@ -28,5 +32,4 @@ class myAgent(Agent):
         #         print("This is child value: ", child.value_sum)
 
         action = root.select_action()
-        print(action)
         return action

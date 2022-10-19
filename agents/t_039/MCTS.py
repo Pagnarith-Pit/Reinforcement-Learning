@@ -68,7 +68,7 @@ class MCTS:
         self.game = game
         #self.model = model
         self.id = id
-        self.count = 0
+        #self.count = 0
         self.STABILITY_WEIGHTS = [[4,  -1,  3,  3,  3,  3, -1,  4],
                                   [-1, -1,  0,  0,  0,  0, -1, -1],
                                   [3,   0,  0,  0,  0,  0,  0,  3],
@@ -80,7 +80,7 @@ class MCTS:
         self.corners_loc = [(0,0), (0,7), (7,0), (7,7)]
          
     def run(self, state):
-        self.count += 1
+        #self.count += 1
         #print("This is count MCTS: ", self.count)
         LIMIT = time.time() + 0.90
         #print("\nCount run: ", self.count)
@@ -88,10 +88,11 @@ class MCTS:
         valid_moves = list(set(self.game.getLegalActions(state, self.id)))
         #origin_moves = valid_moves
         root.expand(state, self.id, valid_moves)
-
+        iter = 0
         while time.time() < LIMIT:
-            # if self.count > 6:
-            #     print("This is iteration number: ", a)
+            iter += 1
+            # if self.count > 20:
+            #     print("\nThis is iteration number: ", a)
             #     for action, child in root.children.items():
             #         print("This is action and children value: ", action, child.value_sum, ucb_score(root, child))
 
@@ -100,7 +101,6 @@ class MCTS:
 
             # SELECT
             while node.expanded():
-                
                 action, node = node.select_child()
                 search_path.append(node)
 
@@ -115,7 +115,7 @@ class MCTS:
              and self.game.getLegalActions(state,1) == ["Pass"]:
 
                 # Final score value at terminal state
-                value = self.game.calScore(next_state, node.to_play) - self.game.calScore(next_state, parent.to_play)
+                value = 1000 * (self.game.calScore(next_state, node.to_play) - self.game.calScore(next_state, parent.to_play))
             
             else:
                 # Predict winners
@@ -123,11 +123,12 @@ class MCTS:
                 value = self.hPredict(next_state, node.to_play)
                 valid_moves = list(set(self.game.getLegalActions(state, node.to_play)))
 
-                for corner in self.corners_loc:
-                    if corner in valid_moves:
-                        value += 5000
-                    if corner == action:
-                        value -= 2500
+                if iter == 1:
+                    for corner in self.corners_loc:
+                        if corner in valid_moves:
+                            value += 3000
+                        if corner == action:
+                            value -= 1000
 
                 node.expand(next_state, node.to_play, valid_moves)
             
@@ -144,7 +145,7 @@ class MCTS:
 
         #print("Value being propagated: ", value)
         #print("Search path len: ", len(search_path))
-        discount = 1
+        discount = 0.9
         counter = 0
         for node in reversed(search_path):
             if node.to_play == to_play:

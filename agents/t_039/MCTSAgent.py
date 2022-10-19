@@ -12,11 +12,10 @@ class myAgent(Agent):
         self.MCTS = MCTS(self.gameRule, _id)
 
     def SelectAction(self,actions,game_state):
-        self.gameRule.agent_colors = game_state.agent_colors
 
+        self.gameRule.agent_colors = game_state.agent_colors
         # if self.stepCount > 20:
         #     return self.MM.SelectAction(actions,game_state)
-
         root = self.MCTS.run(game_state)
 
         # if self.stepCount > 10:
