@@ -10,11 +10,8 @@ class myAgent(Agent):
         super().__init__(_id)
         self.gameRule = ReversiGameRule(2)
         self.MCTS = MCTS(self.gameRule, _id)
-        self.MM = MM(_id)
-        self.stepCount = 0
 
     def SelectAction(self,actions,game_state):
-        self.stepCount += 1
         self.gameRule.agent_colors = game_state.agent_colors
 
         # if self.stepCount > 20:

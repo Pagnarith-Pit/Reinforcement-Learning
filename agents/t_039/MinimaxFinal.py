@@ -123,7 +123,7 @@ class myAgent(Agent):
         if self.openBook:
             tentative = self.getOpenMoves(self.playHistory)
             if tentative:
-                print("Open book!")
+                #print("Open book!")
                 bestAction = tentative
 
                 nextState = self.gameRule.generateSuccessor(game_state, bestAction, self.id)
@@ -138,7 +138,7 @@ class myAgent(Agent):
         # Check killer moves: corners 
         tentative = self.killerMove(game_state,actions,self.id)
         if tentative:
-            print("Killer move!")
+            #print("Killer move!")
             return tentative
         
         # Initialize TT table 
@@ -158,7 +158,7 @@ class myAgent(Agent):
                 bestAction = action 
                 bestScore = score 
 
-        print(f"NewDepth6: Heurustic value: {round(bestScore,2)}; States expanded in search: {self.statesExpanded}, Time taken: {round(time.time()-self.startTime,4)}")
+        #print(f"NewDepth6: Heurustic value: {round(bestScore,2)}; States expanded in search: {self.statesExpanded}, Time taken: {round(time.time()-self.startTime,4)}")
         nextState = self.gameRule.generateSuccessor(game_state, bestAction, self.id)
         self.prevBoard = nextState.board
 
@@ -534,7 +534,7 @@ class myAgent(Agent):
         # blocking move 
         for action, successor_state in zip(actions,successor_states):
             if len(self.gameRule.getLegalActions(successor_state, (agent_id + 1)%2))-1 == 0:
-                print('Blocking move!')
+                #print('Blocking move!')
                 return action 
 
         return None

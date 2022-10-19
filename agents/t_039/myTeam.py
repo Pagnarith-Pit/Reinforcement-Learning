@@ -4,7 +4,7 @@ import math
 import random
 import time
 from agents.t_039.MCTS import Node, MCTS
-
+from agents.t_039.MinimaxFinal import myAgent as MM
 class myAgent(Agent):
     def __init__(self,_id):
         super().__init__(_id)
@@ -15,7 +15,8 @@ class myAgent(Agent):
         self.gameRule.agent_colors = game_state.agent_colors
 
         # if self.stepCount > 20:
-        #     return self.MM.SelectAction(actions,game_state)
+        #     action = self.MM.SelectAction(actions,game_state)
+        #     return action
 
         root = self.MCTS.run(game_state)
 
@@ -27,4 +28,5 @@ class myAgent(Agent):
         #         print("This is child value: ", child.value_sum)
 
         action = root.select_action()
+        print(action)
         return action

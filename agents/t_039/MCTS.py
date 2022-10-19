@@ -77,14 +77,16 @@ class MCTS:
                                   [3,   0,  0,  0,  0,  0,  0,  3],
                                   [-1, -1,  0,  0,  0,  0, -1, -1],
                                   [4,  -1,  3,  3,  3,  3, -1,  4]]
-        
-        
+        self.corners_loc = [(0,0), (0,7), (7,0), (7,7)]
+         
     def run(self, state):
-        LIMIT = time.time() + 0.98
+        self.count += 1
+        print("This is count MCTS: ", self.count)
+        LIMIT = time.time() + 0.95
         #print("\nCount run: ", self.count)
         root = Node(self.id)
         valid_moves = list(set(self.game.getLegalActions(state, self.id)))
-        #origin = valid_moves
+        #origin_moves = valid_moves
         root.expand(state, self.id, valid_moves)
 
         while time.time() < LIMIT:
@@ -120,6 +122,13 @@ class MCTS:
                 # value = model.predict(next_state)
                 value = self.hPredict(next_state, node.to_play)
                 valid_moves = list(set(self.game.getLegalActions(state, node.to_play)))
+
+                for corner in self.corners_loc:
+                    if corner in valid_moves:
+                        value += 350
+                    if corner == action:
+                        value -= 350
+
                 node.expand(next_state, node.to_play, valid_moves)
             
             # if value > 0:
@@ -135,7 +144,7 @@ class MCTS:
 
         #print("Value being propagated: ", value)
         #print("Search path len: ", len(search_path))
-        discount = 0.9
+        discount = 1
         counter = 0
         for node in reversed(search_path):
             if node.to_play == to_play:
@@ -204,7 +213,7 @@ class MCTS:
             return 0
         
     def Heuristic(self, game_state, agent_id):
-        eval = 10 * self.getCorners(game_state,agent_id) + 10 * self.getActualMobility(game_state,agent_id) + \
+        eval =  5 * self.getCorners(game_state,agent_id) + 5 * self.getActualMobility(game_state,agent_id) + \
             5 * self.getStability(game_state,agent_id)
         
         return eval
