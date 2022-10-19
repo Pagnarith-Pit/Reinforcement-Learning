@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import time
 
 
 def ucb_score(parent, child):
@@ -79,14 +80,14 @@ class MCTS:
         
         
     def run(self, state):
-        self.count += 1
+        LIMIT = time.time() + 0.96
         #print("\nCount run: ", self.count)
         root = Node(self.id)
         valid_moves = list(set(self.game.getLegalActions(state, self.id)))
         #origin = valid_moves
         root.expand(state, self.id, valid_moves)
 
-        for a in range(190):
+        while time.time() < LIMIT:
             # if self.count > 6:
             #     print("This is iteration number: ", a)
             #     for action, child in root.children.items():
