@@ -1,9 +1,0 @@
-1) Modify new line print for boardToString()
--> Undone complete
-
-Added True to FREEDOM
-
-2) If you allow selection to select the same state twice during a draw, it will lead to the AI choosing moves
-that leads to a draw
-
-3) Why is the num_of visit of some state still zero even when it is in the visited State?
