@@ -6,7 +6,7 @@ import random
 MAX = math.inf
 MIN = -math.inf
 GRID_SIZE = 8
-THRESHOLD = 16
+THRESHOLD = 14
 
 STATIC_WEIGHTS = [[5,  -4,  2,  2,  2,  2, -4,  5],
                 [-4, -4, -1, -1, -1, -1, -4, -4],
@@ -39,7 +39,7 @@ class myAgent(Agent):
         action_child_states = [(action, self.gameRule.generateSuccessor(game_state, action, self.id)) for action in actions]
         
         # Play to maximise player score pre move threshold
-        if self.stepCount > THRESHOLD:
+        if self.stepCount < THRESHOLD:
             bestval = MIN
             for (action, child_state) in action_child_states:
                 val = self.GreedyBF(child_state, player_id)
@@ -48,7 +48,7 @@ class myAgent(Agent):
                     nextAction = action
         
         # Play to minimize opponent score post move threshold
-        if self.stepCount <= THRESHOLD:
+        if self.stepCount >= THRESHOLD:
             bestval = MAX
             for (action, child_state) in action_child_states:
                 val = self.GreedyBF(child_state, self.Op_id(player_id))
