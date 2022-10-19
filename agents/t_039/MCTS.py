@@ -81,8 +81,8 @@ class MCTS:
          
     def run(self, state):
         self.count += 1
-        print("This is count MCTS: ", self.count)
-        LIMIT = time.time() + 0.95
+        #print("This is count MCTS: ", self.count)
+        LIMIT = time.time() + 0.90
         #print("\nCount run: ", self.count)
         root = Node(self.id)
         valid_moves = list(set(self.game.getLegalActions(state, self.id)))
@@ -125,9 +125,9 @@ class MCTS:
 
                 for corner in self.corners_loc:
                     if corner in valid_moves:
-                        value += 350
+                        value += 5000
                     if corner == action:
-                        value -= 350
+                        value -= 2500
 
                 node.expand(next_state, node.to_play, valid_moves)
             
