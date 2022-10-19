@@ -80,7 +80,7 @@ class MCTS:
         
         
     def run(self, state):
-        LIMIT = time.time() + 0.96
+        LIMIT = time.time() + 0.98
         #print("\nCount run: ", self.count)
         root = Node(self.id)
         valid_moves = list(set(self.game.getLegalActions(state, self.id)))
