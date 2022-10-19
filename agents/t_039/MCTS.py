@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import time
+from Reversi.reversi_model import boardToString
 
 
 def ucb_score(parent, child):
@@ -77,7 +78,7 @@ class MCTS:
                                   [3,   0,  0,  0,  0,  0,  0,  3],
                                   [-1, -1,  0,  0,  0,  0, -1, -1],
                                   [4,  -1,  3,  3,  3,  3, -1,  4]]
-        self.corners_loc = [(0,0), (0,7), (7,0), (7,7)]
+        self.corners_loc = [(0, 0), (0, 7), (7, 0), (7, 7)]
          
     def run(self, state):
         #self.count += 1
@@ -86,15 +87,25 @@ class MCTS:
         #print("\nCount run: ", self.count)
         root = Node(self.id)
         valid_moves = list(set(self.game.getLegalActions(state, self.id)))
+        originMoveLen = len(valid_moves)
+        # test_next = self.game.generateSuccessor(state, valid_moves[0], self.id)
+        # op_move = list(set(self.game.getLegalActions(test_next, (self.id + 1)%2)))
+        # cornerFlag = False
+        # for corner in self.corners_loc:
+        #     if corner in op_move:
+        #         print("This corner is now available to opponent: ", corner)
+        #         print("This is the board state: ", boardToString(state.board, 8))
+        #         cornerFlag = True
+
         #origin_moves = valid_moves
         root.expand(state, self.id, valid_moves)
         iter = 0
         while time.time() < LIMIT:
-            iter += 1
-            # if self.count > 20:
-            #     print("\nThis is iteration number: ", a)
+            # iter += 1
+            # if cornerFlag and iter < 20:
+            #     print("\nThis is iteration number: ", iter)
             #     for action, child in root.children.items():
-            #         print("This is action and children value: ", action, child.value_sum, ucb_score(root, child))
+            #         print("This is action and children value and visit count: ", action, child.value_sum, ucb_score(root, child), child.visit_count)
 
             node = root
             search_path = [node]
@@ -102,7 +113,14 @@ class MCTS:
             # SELECT
             while node.expanded():
                 action, node = node.select_child()
+
+                # if cornerFlag and iter < 20:
+                #     print("This is action taken with node value: ", action)
+
                 search_path.append(node)
+
+                # if cornerFlag and iter < 20:
+                #     print("Len of search path now: ", len(search_path))
 
                 # if self.count > 6:
                 #     print("This is action selected: ", action)
@@ -121,14 +139,16 @@ class MCTS:
                 # Predict winners
                 # value = model.predict(next_state)
                 value = self.hPredict(next_state, node.to_play)
-                valid_moves = list(set(self.game.getLegalActions(state, node.to_play)))
+                valid_moves = list(set(self.game.getLegalActions(next_state, node.to_play)))
+                # if cornerFlag and iter < 20:
+                #     print("This is opponent moves: ", valid_moves)
 
-                if iter == 1:
+                if iter <= originMoveLen:
                     for corner in self.corners_loc:
                         if corner in valid_moves:
-                            value += 3000
+                            value += 500
                         if corner == action:
-                            value -= 1000
+                            value -= 500
 
                 node.expand(next_state, node.to_play, valid_moves)
             
@@ -214,7 +234,7 @@ class MCTS:
             return 0
         
     def Heuristic(self, game_state, agent_id):
-        eval =  5 * self.getCorners(game_state,agent_id) + 5 * self.getActualMobility(game_state,agent_id) + \
-            5 * self.getStability(game_state,agent_id)
+        eval =  10 * self.getCorners(game_state,agent_id) + 3 * self.getActualMobility(game_state,agent_id) + \
+            1 * self.getStability(game_state,agent_id)
         
         return eval
