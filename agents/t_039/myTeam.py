@@ -15,7 +15,7 @@ class myAgent(Agent):
 
         if actions == ["Pass"]:
             return "Pass"
-        
+        print("Newest Agent")
         self.gameRule.agent_colors = game_state.agent_colors
 
         # if self.stepCount > 20:

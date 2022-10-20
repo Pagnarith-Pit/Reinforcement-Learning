@@ -1,4 +1,5 @@
 from datetime import timedelta
+from threading import currentThread
 from template import GameState, GameRule, Agent
 from Reversi.reversi_model import *
 from Reversi.reversi_utils import boardToString, Cell
@@ -7,19 +8,45 @@ import random
 import time
 import operator
 
+INITIAL_DEPTH = 10
+CUTOFF = 0
+GRID_SIZE = 8 
+TIME_LIMIT = 0.78
+MAX_DISC = 64
 
+
+
+# For Heurisrtics, STABILITY WEIGHTS, Components from Heuristic function is adapted from: 
+# 2015, Paul G. Allen Center, An Analysis of Heuristics in Othello
+# 2003,Michael Buro, THE EVOLUTION OF STRONG OTHELLO PROGRAMS 
+
+STABILITY_WEIGHTS = [[4,  -3,  2,  2,  2,  2, -3,  4],
+                   [-3, -4, -1, -1, -1, -1, -4, -3],
+                   [2,  -1,  1,  0,  0,  1, -1,  2],
+                   [2,  -1,  0,  0,  0,  0, -1,  2],
+                   [2,  -1,  0,  0,  0,  0, -1,  2],
+                   [2,  -1,  1,  0,  0,  1, -1,  2],
+                   [-3, -4, -1, -1, -1, -1, -4, -3],
+                   [4,  -3,  2,  2,  2,  2, -3,  4]]
+DISC_SQUARES =    [[20,  -4,  11,  8,   8,  11,  -4,   20],
+                   [-4,  -7,  -4,  -1,  -1, -4,   -8,  -4],
+                   [11,  -4,   2,   2,   2,  2,   -4,  11],
+                   [8,    -1,  2, -3, -3,  2,    -1,   8],
+                   [8,   -1,   2,  -3,  -3,  2,    -1,  8],
+                   [11,  -4,   2,   2,   2,  2,   -4,   11],
+                   [-4,  -8,  -4,  -1,  -1, -4,   -8,  -4],
+                   [20,  -4,   11,  8,   8, 11,   -4,   20]]
+COL_MAPPING= {0:'a', 1:'b', 2: 'c', 3:'d', 4:'e', 5:'f', 6:'g', 7:'h'}
 
 # Initial values of alpha, beta 
-
+MAX, MIN = math.inf, -math.inf
 
 
 class myAgent(Agent):
     def __init__(self,_id):
         super().__init__(_id)
         # added
-        self.GRID_SIZE = 8
-        self.MAX, self.MIN = math.inf, -math.inf
-        self.prevBoard = [[Cell.EMPTY for i in range(self.GRID_SIZE)] for i in range(self.GRID_SIZE)]
+        self.prevBoard = [[Cell.EMPTY for i in range(GRID_SIZE)] for i in range(GRID_SIZE)]
         self.prevBoard[4-1][4-1] = Cell.WHITE
         self.prevBoard[4][4-1] = Cell.BLACK
         self.prevBoard[4-1][4] = Cell.BLACK
@@ -32,28 +59,6 @@ class myAgent(Agent):
         self.bestAction = None
         self.op_id = self.gameRule.getNextAgentIndex()
         self.playHistory = ''
-        self.INITIAL_DEPTH = 8
-        self.TIME_LIMIT = 0.78
-        self.MAX_DISC = 64
-        self.STABILITY_WEIGHTS = [[4,  -3,  2,  2,  2,  2, -3,  4],
-                   [-3, -4, -1, -1, -1, -1, -4, -3],
-                   [2,  -1,  1,  0,  0,  1, -1,  2],
-                   [2,  -1,  0,  0,  0,  0, -1,  2],
-                   [2,  -1,  0,  0,  0,  0, -1,  2],
-                   [2,  -1,  1,  0,  0,  1, -1,  2],
-                   [-3, -4, -1, -1, -1, -1, -4, -3],
-                   [4,  -3,  2,  2,  2,  2, -3,  4]]
-
-        self.DISC_SQUARES =    [[20,  -4,  11,  8,   8,  11,  -4,   20],
-                   [-4,  -7,  -4,  -1,  -1, -4,   -8,  -4],
-                   [11,  -4,   2,   2,   2,  2,   -4,  11],
-                   [8,    -1,  2, -3, -3,  2,    -1,   8],
-                   [8,   -1,   2,  -3,  -3,  2,    -1,  8],
-                   [11,  -4,   2,   2,   2,  2,   -4,   11],
-                   [-4,  -8,  -4,  -1,  -1, -4,   -8,  -4],
-                   [20,  -4,   11,  8,   8, 11,   -4,   20]]
-        self.COL_MAPPING= {0:'a', 1:'b', 2: 'c', 3:'d', 4:'e', 5:'f', 6:'g', 7:'h'}
- 
         # initialize dict for {eval: move}
 
         # Debugging / testing 
@@ -76,17 +81,17 @@ class myAgent(Agent):
         
 
 
-        bestAction, bestScore = random.choice(actions), self.MIN
+        bestAction, bestScore = random.choice(actions), MIN
 
         self.gameRule.agent_colors = game_state.agent_colors
         if actions == ["Pass"]:
             return "Pass"
 
-        initial_depth = self.INITIAL_DEPTH
+        initial_depth = INITIAL_DEPTH
         
 
         # Implement end-game check (MAX_DISCS - current discs)
-        blanks = self.MAX_DISC - self.gameRule.calScore(game_state,self.id) - self.gameRule.calScore(game_state,(self.id + 1)%2)
+        blanks = MAX_DISC - self.gameRule.calScore(game_state,self.id) - self.gameRule.calScore(game_state,(self.id + 1)%2)
 
         if blanks > 44:
             self.earlyGame = True 
@@ -105,7 +110,7 @@ class myAgent(Agent):
             self.endGame = True
         else:
             self.endGame = False
-
+        
         if blanks <= 15:
             initial_depth = 10
 
@@ -115,7 +120,7 @@ class myAgent(Agent):
         # -> (COL_DICT[COL], ROW+1)
         if blanks <= 60 and (3,2) in actions:
             self.openBook = True 
-            self.playHistory += f"{self.COL_MAPPING[2]}{3+1}"
+            self.playHistory += f"{COL_MAPPING[2]}{3+1}"
             nextState = self.gameRule.generateSuccessor(game_state, (3,2), self.id)
             self.prevBoard = nextState.board
             return (3,2)
@@ -123,14 +128,14 @@ class myAgent(Agent):
         if self.openBook:
             tentative = self.getOpenMoves(self.playHistory)
             if tentative:
-                #print("Open book!")
+                print("Open book!")
                 bestAction = tentative
 
                 nextState = self.gameRule.generateSuccessor(game_state, bestAction, self.id)
                 self.prevBoard = nextState.board
 
                 (row,col) = bestAction 
-                self.playHistory += f"{self.COL_MAPPING[col]}{row+1}"
+                self.playHistory += f"{COL_MAPPING[col]}{row+1}"
                 # update things
 
                 return bestAction
@@ -138,7 +143,7 @@ class myAgent(Agent):
         # Check killer moves: corners 
         tentative = self.killerMove(game_state,actions,self.id)
         if tentative:
-            #print("Killer move!")
+            print("Killer move!")
             return tentative
         
         # Initialize TT table 
@@ -148,23 +153,29 @@ class myAgent(Agent):
 
         # do this while we dont run out of time 
         for depth in range(2,initial_depth,1):
+            currStart = time.time()
             # try to extract action, score from alpha beta 
             #action, score = self.AlphaBeta(actions,game_state,depth)
 
             action,score = self.AlphaBeta(actions,game_state,depth)
+            # if current expansion took more than 
+            currTime = time.time() - currStart
             
             # check whether the IDAB has terminated with success
             if action:
                 bestAction = action 
                 bestScore = score 
+            # check time limit
+            if currTime > 0.382:
+                break 
 
-        #print(f"NewDepth6: Heurustic value: {round(bestScore,2)}; States expanded in search: {self.statesExpanded}, Time taken: {round(time.time()-self.startTime,4)}")
+        print(f"NewDepth6: Heurustic value: {round(bestScore,2)}; States expanded in search: {self.statesExpanded}, Time taken: {round(time.time()-self.startTime,4)}")
         nextState = self.gameRule.generateSuccessor(game_state, bestAction, self.id)
         self.prevBoard = nextState.board
 
         # Increment history 
         (x,y) = bestAction 
-        self.playHistory += f"{self.COL_MAPPING[x]}{y+1}"
+        self.playHistory += f"{COL_MAPPING[x]}{y+1}"
 
         return bestAction
 
@@ -173,7 +184,7 @@ class myAgent(Agent):
         """
         Returns True if time within bound if not False 
         """
-        if time.time() - self.startTime < self.TIME_LIMIT:
+        if time.time() - self.startTime < TIME_LIMIT:
             return True 
 
         return False
@@ -198,8 +209,8 @@ class myAgent(Agent):
             return "Pass"
 
         # initialize alpha, beta 
-        alpha = self.MIN 
-        beta = self.MAX
+        alpha = MIN 
+        beta = MAX
 
         # initialize action 
         bestAction = None 
@@ -234,12 +245,20 @@ class myAgent(Agent):
         # IF CUTOFF-Test (have not checked end game conditions)
         if depth == 0  or self.endState(game_state) or not self.timeLeft():
             return self.newEval(game_state,agent_id)
-            return self.Heuristic(game_state,agent_id)
+
 
         ## Get legal actions (of opponent?)
         actions = self.gameRule.getLegalActions(game_state,agent_id)
-        successor_states = [self.gameRule.generateSuccessor(game_state, action, agent_id) for action in actions]
 
+        # just do stability weights ordering 
+        sMO = dict()
+        if actions != ["Pass"]:
+            for action in actions:
+                (i,j) = action
+                sMO[action] = DISC_SQUARES[i][j]
+
+        sortedActions = list(dict(sorted(sMO.items(), key=operator.itemgetter(1),reverse=True)).keys())
+        successor_states = [self.gameRule.generateSuccessor(game_state, action, agent_id) for action in sortedActions]
 
         for successor_state in successor_states:
             # increment 
@@ -259,13 +278,24 @@ class myAgent(Agent):
         # IF CUTOFF-Test (have not checked end game conditions)
         if depth == 0 or self.endState(game_state) or not self.timeLeft():
             return self.newEval(game_state,agent_id)
-            return self.Heuristic(game_state,agent_id)
-            return self.getStability(game_state,agent_id)
+          
         ## Get legal actions 
         op_id = self.gameRule.getNextAgentIndex()
+
         actions = self.gameRule.getLegalActions(game_state, op_id)
 
-        successor_states = [self.gameRule.generateSuccessor(game_state, action, op_id) for action in actions]
+        # just do stability weights ordering 
+        sMO = dict()
+        if actions != ["Pass"]:
+            for action in actions:
+                (i,j) = action
+                sMO[action] = DISC_SQUARES[i][j]
+
+        # min wants bad max, so in ascending order
+        sortedActions = list(dict(sorted(sMO.items(), key=operator.itemgetter(1),reverse=False)).keys())
+  
+
+        successor_states = [self.gameRule.generateSuccessor(game_state, action, op_id) for action in sortedActions]
 
         # get opponent id 
         for successor_state in successor_states:
@@ -282,8 +312,8 @@ class myAgent(Agent):
     
 
         # compare: 
-        for i in range(self.GRID_SIZE):
-            for j in range(self.GRID_SIZE):
+        for i in range(GRID_SIZE):
+            for j in range(GRID_SIZE):
                 # find difference
                 if prev_board[i][j] == Cell.EMPTY and curr_board[i][j] != Cell.EMPTY:
                     #print(f"opponent played (i,j):  ({j},{i})")
@@ -332,14 +362,14 @@ class myAgent(Agent):
 
     def getStability(self,game_state,agent_id):
         my_stability, tot = 0,0
-        for i in range(self.GRID_SIZE):
-            for j in range(self.GRID_SIZE):
+        for i in range(GRID_SIZE):
+            for j in range(GRID_SIZE):
                 if game_state.board[i][j] == self.gameRule.agent_colors[agent_id]:
-                    my_stability += self.STABILITY_WEIGHTS[i][j]
-                    tot += abs(self.STABILITY_WEIGHTS[i][j])
+                    my_stability += STABILITY_WEIGHTS[i][j]
+                    tot += abs(STABILITY_WEIGHTS[i][j])
                 elif game_state.board[i][j] == self.gameRule.agent_colors[(agent_id + 1)%2]:
-                    my_stability -= self.STABILITY_WEIGHTS[i][j]
-                    tot += abs(self.STABILITY_WEIGHTS[i][j])
+                    my_stability -= STABILITY_WEIGHTS[i][j]
+                    tot += abs(STABILITY_WEIGHTS[i][j])
 
         if not tot == 0:
             return 100 * float(my_stability) / tot
@@ -534,7 +564,7 @@ class myAgent(Agent):
         # blocking move 
         for action, successor_state in zip(actions,successor_states):
             if len(self.gameRule.getLegalActions(successor_state, (agent_id + 1)%2))-1 == 0:
-                #print('Blocking move!')
+                print('Blocking move!')
                 return action 
 
         return None
@@ -621,8 +651,8 @@ class myAgent(Agent):
             
     def validPos(self):
         pos_list = []
-        for x in range(self.GRID_SIZE):
-            for y in range(self.GRID_SIZE):
+        for x in range(GRID_SIZE):
+            for y in range(GRID_SIZE):
                 pos_list.append((x,y))
         return pos_list
     
@@ -636,8 +666,8 @@ class myAgent(Agent):
         opFrontiers = set()
 
         # Compute frontier discs 
-        for x in range(self.GRID_SIZE):
-            for y in range(self.GRID_SIZE):
+        for x in range(GRID_SIZE):
+            for y in range(GRID_SIZE):
                 # own color 
 
                 if game_state.board[x][y] == self.gameRule.agent_colors[agent_id]:
@@ -687,15 +717,15 @@ class myAgent(Agent):
         """
         discSquareScore = 0 
 
-        for i in range(self.GRID_SIZE):
-            for j in range(self.GRID_SIZE):
+        for i in range(GRID_SIZE):
+            for j in range(GRID_SIZE):
                 # self color 
                 if game_state.board[i][j] == self.gameRule.agent_colors[agent_id]:
-                    discSquareScore += self.DISC_SQUARES[i][j]
+                    discSquareScore += DISC_SQUARES[i][j]
             
                 # op color 
                 elif game_state.board[i][j] == self.gameRule.agent_colors[(agent_id + 1)%2]:
-                    discSquareScore -= self.DISC_SQUARES[i][j]
+                    discSquareScore -= DISC_SQUARES[i][j]
                 # empty square -> do nothing
 
 
@@ -703,15 +733,14 @@ class myAgent(Agent):
     
     def newEval(self,game_state,agent_id):
         if self.earlyGame:
-            return  10 * self.pieceDifference(game_state,agent_id) + \
-            801.724 * self.cornerOccupancy(game_state,agent_id) + \
+            return  801.724 * self.cornerOccupancy(game_state,agent_id) + \
             382.026 * self.cornerCloseness(game_state,agent_id) + \
             78.922 * self.Mobility(game_state,agent_id) + \
-            20 * self.discSquares(game_state,agent_id) + \
+            10 * self.discSquares(game_state,agent_id) + \
             50.386 * self.frontierDiscs(game_state,agent_id)
 
         elif self.midGame:
-            return  10 * self.pieceDifference(game_state,agent_id) + \
+            return  7.5 * self.pieceDifference(game_state,agent_id) + \
             801.724 * self.cornerOccupancy(game_state,agent_id) + \
             382.026 * self.cornerCloseness(game_state,agent_id) + \
             78.922 * self.Mobility(game_state,agent_id) + \
@@ -720,8 +749,16 @@ class myAgent(Agent):
             
 
         elif self.endGame:
-            return 11 * self.pieceDifference(game_state,agent_id) + 801.724 * self.cornerOccupancy(game_state,agent_id) + \
+            return 10 * self.pieceDifference(game_state,agent_id) + 801.724 * self.cornerOccupancy(game_state,agent_id) + \
             382.026 * self.cornerCloseness(game_state,agent_id) + \
             78.922 * self.Mobility(game_state,agent_id) + \
             10 * self.discSquares(game_state,agent_id) + \
             74.386 * self.frontierDiscs(game_state,agent_id)
+
+
+
+
+
+   
+
+        
