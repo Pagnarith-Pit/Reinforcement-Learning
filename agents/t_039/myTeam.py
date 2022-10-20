@@ -3,7 +3,7 @@ from Reversi.reversi_model import *
 import math
 import random
 import time
-from agents.t_039.MCTS import Node, MCTS
+from agents.t_039.MCTRollout import Node, MCTS
 from agents.t_039.MinimaxFinal import myAgent as MM
 class myAgent(Agent):
     def __init__(self,_id):

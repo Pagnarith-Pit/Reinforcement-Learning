@@ -9,7 +9,7 @@ def ucb_score(parent, child):
     try:
         explore_score = math.sqrt(2*math.log(parent.visit_count) / (child.visit_count))
     except (ValueError, ZeroDivisionError):
-        return 1000000
+        return 1000
 
     
     if child.visit_count > 0:
@@ -70,19 +70,20 @@ class MCTS:
         self.game = game
         #self.model = model
         self.id = id
-        #self.count = 0
-        self.STABILITY_WEIGHTS = [[4,  -1,  3,  3,  3,  3, -1,  4],
-                                  [-1, -1,  0,  0,  0,  0, -1, -1],
-                                  [3,   0,  0,  0,  0,  0,  0,  3],
-                                  [3,   0,  0,  0,  0,  0,  0,  3],
-                                  [3,   0,  0,  0,  0,  0,  0,  3],
-                                  [3,   0,  0,  0,  0,  0,  0,  3],
-                                  [-1, -1,  0,  0,  0,  0, -1, -1],
-                                  [4,  -1,  3,  3,  3,  3, -1,  4]]
+        self.count = 0
+        # self.STABILITY_WEIGHTS = [[4,  -1,  3,  3,  3,  3, -1,  4],
+        #                           [-1, -1,  0,  0,  0,  0, -1, -1],
+        #                           [3,   0,  0,  0,  0,  0,  0,  3],
+        #                           [3,   0,  0,  0,  0,  0,  0,  3],
+        #                           [3,   0,  0,  0,  0,  0,  0,  3],
+        #                           [3,   0,  0,  0,  0,  0,  0,  3],
+        #                           [-1, -1,  0,  0,  0,  0, -1, -1],
+        #                           [4,  -1,  3,  3,  3,  3, -1,  4]]
         self.corners_loc = [(0, 0), (0, 7), (7, 0), (7, 7)]
          
     def run(self, state):
-        #self.count += 1
+        self.count += 1
+        # print(self.count)
         #print("This is count MCTS: ", self.count)
         LIMIT = time.time() + 0.95
         #print("\nCount run: ", self.count)
@@ -93,9 +94,9 @@ class MCTS:
         # op_move = list(set(self.game.getLegalActions(test_next, (self.id + 1)%2)))
         # cornerFlag = False
         # for corner in self.corners_loc:
-        #     if corner in op_move:
-        #         print("This corner is now available to opponent: ", corner)
-        #         print("This is the board state: ", boardToString(state.board, 8))
+        #     if corner in valid_moves:
+        #         print("This corner is now available to us: ", corner)
+        #         # print("This is the board state: ", boardToString(state.board, 8))
         #         cornerFlag = True
 
         #origin_moves = valid_moves
@@ -134,12 +135,17 @@ class MCTS:
              and self.game.getLegalActions(state,1) == ["Pass"]:
 
                 # Final score value at terminal state
-                value = 1000 * (self.game.calScore(next_state, node.to_play) - self.game.calScore(next_state, parent.to_play))
+                score = self.game.calScore(next_state, node.to_play) - self.game.calScore(next_state, parent.to_play)
+
+                if score > 0:
+                    value = 1
+                else:
+                    value = -1
             
             else:
                 # Predict winners
                 # value = model.predict(next_state)
-                value = self.hPredict(next_state, node.to_play)
+                value = self.rolloutPred(next_state, node.to_play)
                 valid_moves = list(set(self.game.getLegalActions(next_state, node.to_play)))
                 # if cornerFlag and iter < 20:
                 #     print("This is opponent moves: ", valid_moves)
@@ -179,66 +185,66 @@ class MCTS:
             node.visit_count += 1
             counter += 1
     
-    def hPredict(self, state, id):
+    # def hPredict(self, state, id):
         
-        player =  self.game.calScore(state, id) + 10 * self.Heuristic(state, id)
-        op = self.game.calScore(state, ((id + 1) % 2)) + 10 * self.Heuristic(state, ((id + 1) % 2))
+    #     player =  self.game.calScore(state, id) + 10 * self.Heuristic(state, id)
+    #     op = self.game.calScore(state, ((id + 1) % 2)) + 10 * self.Heuristic(state, ((id + 1) % 2))
         
-        return player - op
+    #     return player - op
 
-    def getActualMobility(self,game_state,agent_id):
-        ownmoves = 0 
-        opponentmoves = 0 
-        # get moves, -1 to exclude pass moves 
-        ownmoves = len(list(set(self.game.getLegalActions(game_state, agent_id))))-1
-        opponentmoves = len(list(set(self.game.getLegalActions(game_state,(agent_id + 1)%2))))-1
+    # def getActualMobility(self,game_state,agent_id):
+    #     ownmoves = 0 
+    #     opponentmoves = 0 
+    #     # get moves, -1 to exclude pass moves 
+    #     ownmoves = len(list(set(self.game.getLegalActions(game_state, agent_id))))-1
+    #     opponentmoves = len(list(set(self.game.getLegalActions(game_state,(agent_id + 1)%2))))-1
 
-        if ownmoves + opponentmoves != 0:
-            MobilityHeuristic = (float(ownmoves)-opponentmoves) / (float(ownmoves) +opponentmoves )
+    #     if ownmoves + opponentmoves != 0:
+    #         MobilityHeuristic = (float(ownmoves)-opponentmoves) / (float(ownmoves) +opponentmoves )
 
-        else:
-            MobilityHeuristic = 0 
+    #     else:
+    #         MobilityHeuristic = 0 
 
-        return MobilityHeuristic
+    #     return MobilityHeuristic
 
 
-    def getStability(self,game_state,agent_id):
-        my_stability, tot = 0,0
-        for i in range(8):
-            for j in range(8):
-                if game_state.board[i][j] == self.game.agent_colors[agent_id]:
-                    my_stability += self.STABILITY_WEIGHTS[i][j]
-                    tot += abs(self.STABILITY_WEIGHTS[i][j])
-                elif game_state.board[i][j] == self.game.agent_colors[(agent_id + 1)%2]:
-                    my_stability -= self.STABILITY_WEIGHTS[i][j]
-                    tot += abs(self.STABILITY_WEIGHTS[i][j])
+    # def getStability(self,game_state,agent_id):
+    #     my_stability, tot = 0,0
+    #     for i in range(8):
+    #         for j in range(8):
+    #             if game_state.board[i][j] == self.game.agent_colors[agent_id]:
+    #                 my_stability += self.STABILITY_WEIGHTS[i][j]
+    #                 tot += abs(self.STABILITY_WEIGHTS[i][j])
+    #             elif game_state.board[i][j] == self.game.agent_colors[(agent_id + 1)%2]:
+    #                 my_stability -= self.STABILITY_WEIGHTS[i][j]
+    #                 tot += abs(self.STABILITY_WEIGHTS[i][j])
 
-        if not tot == 0:
-            return float(my_stability) / tot
-        else:
-            return 0
+    #     if not tot == 0:
+    #         return float(my_stability) / tot
+    #     else:
+    #         return 0
 
-    def getCorners(self,game_state,agent_id):
-        corners_loc = [(0,0), (0,7), (7,0), (7,7)]
+    # def getCorners(self,game_state,agent_id):
+    #     corners_loc = [(0,0), (0,7), (7,0), (7,7)]
 
-        self_corner,opponent_corner = 0,0 
+    #     self_corner,opponent_corner = 0,0 
 
-        for (i,j) in corners_loc: 
-            if game_state.board[i][j] == self.game.agent_colors[agent_id]:
-                self_corner += 1
-            elif game_state.board[i][j] == self.game.agent_colors[(agent_id + 1)%2]:
-                opponent_corner += 1 
+    #     for (i,j) in corners_loc: 
+    #         if game_state.board[i][j] == self.game.agent_colors[agent_id]:
+    #             self_corner += 1
+    #         elif game_state.board[i][j] == self.game.agent_colors[(agent_id + 1)%2]:
+    #             opponent_corner += 1 
 
-        if float(self_corner) + opponent_corner != 0:
-            return (float(self_corner) - opponent_corner) / (float(self_corner) + opponent_corner)
-        else:
-            return 0
+    #     if float(self_corner) + opponent_corner != 0:
+    #         return (float(self_corner) - opponent_corner) / (float(self_corner) + opponent_corner)
+    #     else:
+    #         return 0
         
-    def Heuristic(self, game_state, agent_id):
-        eval =  10 * self.getCorners(game_state,agent_id) + 3 * self.getActualMobility(game_state,agent_id) + \
-            1 * self.getStability(game_state,agent_id)
+    # def Heuristic(self, game_state, agent_id):
+    #     eval =  10 * self.getCorners(game_state,agent_id) + 3 * self.getActualMobility(game_state,agent_id) + \
+    #         1 * self.getStability(game_state,agent_id)
         
-        return eval
+    #     return eval
     
     def rolloutPred(self, game_state, agent_id):
         agent_idSet = [agent_id, (agent_id + 1)%2]
@@ -246,13 +252,20 @@ class MCTS:
         action = random.choice(legalMoves)
         next_state = self.game.generateSuccessor(game_state, action, agent_id)
         i = 1
-        while  self.game.getLegalActions(next_state,0) == ["Pass"] \
-             and self.game.getLegalActions(next_state,1) == ["Pass"]:
 
-            legalMoves = self.game.getLegalActions(next_state, agent_idSet[i])
-            action = random.choice(legalMoves)
-            next_state = self.game.generateSuccessor(game_state, action, agent_idSet[i])
+        # print("This is beginning sim: ", boardToString(next_state.board, 8))
+        for _ in range(10):
+            if not (self.game.getLegalActions(next_state,0) == ["Pass"] \
+             and self.game.getLegalActions(next_state,1) == ["Pass"]):
+              
+                legalMoves = self.game.getLegalActions(next_state, agent_idSet[i])
+                action = random.choice(legalMoves)
+                next_state = self.game.generateSuccessor(next_state, action, agent_idSet[i])
+
+            # print("This is during sim: ", boardToString(next_state.board, 8))
+
+            i = (i + 1)%2
 
         score = self.game.calScore(next_state, agent_id) - self.game.calScore(next_state, (agent_id + 1)%2)
 
-        return 1 if score > 0 else -1
+        return score

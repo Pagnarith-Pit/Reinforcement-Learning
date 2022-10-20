@@ -13,6 +13,9 @@ class myAgent(Agent):
 
     def SelectAction(self,actions,game_state):
 
+        if actions == ["Pass"]:
+            return "Pass"
+
         self.gameRule.agent_colors = game_state.agent_colors
         # if self.stepCount > 20:
         #     return self.MM.SelectAction(actions,game_state)
