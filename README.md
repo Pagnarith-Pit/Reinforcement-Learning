@@ -1,4 +1,11 @@
-# Reversi Project Template
+# Reinforcement Learning and AI Project
+### Development Tools:
+Google Collab (Free), running for approximate 1 day for each training iteration
+
+### Result:
+Ended up as **top 5** in the cohort
+
+### Reversi Project Template
 
 You must read fully and carefully the assignment specification and instructions detailed in this file. You are NOT to modify this file in any way.
 
